@@ -1,0 +1,80 @@
+version: '3.3'
+
+services:
+  lumen:
+    container_name: lumen
+    image: nginx:alpine
+    volumes:
+      - .:/usr/share/nginx/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 8080:80
+    environment:
+      - NGINX_HOST=172.40.10.30
+      - NGINX_PORT=80
+    networks:
+      lumen-sandbox-network:
+        ipv4_address: 172.40.10.30
+        aliases:
+          - lumen
+
+  php-fpm81:
+    container_name: php-fpm81
+    build:
+      dockerfile: ./docker/php-fpm81.Dockerfile
+      context: .
+    volumes:
+      - .:/var/www/html
+      - ./docker/php/8.1/fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf
+    networks:
+      lumen-sandbox-network:
+        ipv4_address: 172.40.10.20
+        aliases:
+          - php-fpm81
+
+  mysql8:
+    container_name: mysql8
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: 'lumen'
+      MYSQL_USER: 'lumen'
+      MYSQL_PASSWORD: 'secret'
+      MYSQL_ROOT_PASSWORD: 'root'
+    volumes:
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+      - db-data:/var/lib/mysql
+    networks:
+      lumen-sandbox-network:
+        ipv4_address: 172.40.10.10
+        aliases:
+          - mysql8
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    networks:
+      lumen-sandbox-network:
+        ipv4_address: 172.40.10.11
+        aliases:
+          - redis
+
+  mailhog:
+    container_name: mailhog
+    image: mailhog/mailhog
+    networks:
+      lumen-sandbox-network:
+        ipv4_address: 172.40.10.12
+        aliases:
+          - mailhog
+
+volumes:
+  db-data:
+    driver: local
+
+networks:
+  lumen-sandbox-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.40.10.0/24
